@@ -1,8 +1,10 @@
 const express = require("express");
 const app = express();
 const cors = require("cors");
+const fs = require("fs");
 
 app.use(cors({}));
+app.use(express.json({}));
 const { Reader } = require("thaismartcardreader.js");
 const { error } = require("console");
 
@@ -100,6 +102,19 @@ app.get("/pooling", async (req, res) => {
       message: error?.message,
     });
   }
+});
+
+app.get("/", (req, res) => {
+  fs.readFile("config.json", (err, data) => {
+    const jsonData = data.toString();
+    res.send(jsonData);
+  });
+});
+
+app.put("/info", (req, res) => {
+  fs.writeFile("config.json", (err, data) => {
+    res.status(200).json({ success: true });
+  });
 });
 
 app.listen(23523, () => {
