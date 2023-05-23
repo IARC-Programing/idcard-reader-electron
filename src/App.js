@@ -17,6 +17,8 @@ import {
   Subtitle1,
   Input,
   Label,
+  Divider,
+  Switch,
 } from "@fluentui/react-components";
 
 const useStyles = makeStyles({
@@ -38,6 +40,23 @@ const useStyles = makeStyles({
     marginTop: "10px",
     gap: "5px",
   },
+  divider: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyItems: "center",
+    minHeight: "96px",
+  },
+  footer: {
+    marginTop: "20px",
+    textAlign: "center",
+  },
+  checkbox: {
+    display: "flex",
+    justifyContent: "space-between",
+    marginBottom: "10px",
+    marginLeft: "15px",
+  },
 });
 
 function App() {
@@ -47,20 +66,23 @@ function App() {
   const [selectedTab, setSelectedTab] = useState("main");
   const [selectedURL, setSelectedURL] = useState("");
   const [selectedAPIKey, setSelectedAPIKey] = useState("");
+  const [systemInfo, setSystemInfo] = useState({});
+  const [enable, setEnable] = useState(false);
 
+  const API_URL = "http://localhost:23523";
   const styles = useStyles();
   useEffect(() => {
     if (fetchNew) {
       console.log("Fetch New One");
       setFetchNew(false);
       axios
-        .get("http://localhost:23523/pooling")
+        .get(API_URL + "/pooling")
         .then((res) => {
           setCurrentPerson(res.data);
           setErrorMessage("");
         })
         .catch((err) => {
-          setErrorMessage(err?.message);
+          setErrorMessage(JSON.stringify(err?.response?.data));
         });
     }
 
@@ -69,10 +91,12 @@ function App() {
 
   useEffect(() => {
     let timeout;
-    if (fetchNew === false) {
-      timeout = setTimeout(() => {
-        setFetchNew(true);
-      }, 3000);
+    if (enable) {
+      if (fetchNew === false) {
+        timeout = setTimeout(() => {
+          setFetchNew(true);
+        }, 3000);
+      }
     }
 
     return () => {
@@ -80,8 +104,43 @@ function App() {
         clearTimeout(timeout);
       }
     };
-  }, [fetchNew]);
+  }, [fetchNew, enable]);
 
+  const getSystemInfo = () => {
+    axios
+      .get(API_URL + "/")
+      .then((res) => {
+        setSystemInfo(res.data);
+        setSelectedURL(res?.data?.apiURL);
+        setSelectedAPIKey(res?.data?.apiKey);
+      })
+      .catch((err) => {
+        setErrorMessage("เชื่อมต่อระบบไม่ได้" + err?.message);
+      });
+  };
+
+  useEffect(() => {
+    getSystemInfo();
+
+    return () => {};
+  }, []);
+
+  const handleUpdateAPI = () => {
+    const payload = {
+      apiURL: selectedURL,
+      apiKey: selectedAPIKey,
+    };
+
+    axios
+      .put(API_URL + "/info", payload)
+      .then(() => {
+        alert("แก้ไขสำเร็จ");
+        getSystemInfo();
+      })
+      .catch((err) => {
+        setErrorMessage(`แก้ไขข้อมูลมีปัญหา  ${err?.message}`);
+      });
+  };
   return (
     <div>
       <div className={styles.root}>
@@ -97,24 +156,41 @@ function App() {
       </div>
 
       {selectedTab === "main" && (
-        <Card className={styles.card}>
-          <CardHeader
-            header={
-              <Body1>
-                <Subtitle1>ระบบดึงข้อมูลจากบัตรประชาชน</Subtitle1>
-              </Body1>
-            }
-          />
-          <div>
+        <div>
+          <div className={styles.checkbox}>
             <Body1>
-              <b>เลขบัตรประจำตัวประชาชน {currentPerson?.cid}</b>
+              <Subtitle1>ระบบดึงข้อมูลจากบัตรประชาชน</Subtitle1>
             </Body1>
+            <Switch
+              checked={enable}
+              onChange={(e) => setEnable(e.target.checked)}
+              label={enable ? "เปิดใช้งาน" : "ปิดการใช้งาน"}
+            />
           </div>
-          <CardFooter>
-            <Button>Reply</Button>
-            <Button>Share</Button>
-          </CardFooter>
-        </Card>
+          <Card className={styles.card}>
+            <CardHeader />
+            <div>
+              <Body1>
+                <b>เลขบัตรประจำตัวประชาชน </b>
+                {currentPerson?.cid}
+                <br />
+                <b> ชื่อ </b>
+                {currentPerson?.thPrefix}
+                {currentPerson?.thName} {currentPerson?.thSurname} <br />
+                <b> ที่อยู่ </b>
+                {currentPerson?.address} <br />
+                <b> วัน เดือน ปีเกิด </b>
+                {currentPerson?.dayOfBirth || "-"}/
+                {currentPerson?.monthOfBirth || "-"}/
+                {currentPerson?.yearOfBirth || "-"}
+              </Body1>
+            </div>
+            <CardFooter>
+              {/* <Button>Reply</Button>
+            <Button>Share</Button> */}
+            </CardFooter>
+          </Card>
+        </div>
       )}
       {selectedTab === "setting" && (
         <Card className={styles.card}>
@@ -142,11 +218,22 @@ function App() {
           />
           <div></div>
           <CardFooter>
-            <Button appearance='primary'>Save</Button>
+            <Button appearance='primary' onClick={() => handleUpdateAPI()}>
+              Save
+            </Button>
           </CardFooter>
         </Card>
       )}
       <div>{errorMessage}</div>
+      <Divider />
+      <div className={styles.footer}>
+        <Body1>
+          ศูนย์วิจัยระบบอัตโนมัติอัจฉริยะ คณะวิศวกรรมศาสตร์
+          มหาวิทยาลัยสงขลานครินทร์
+          <br />
+          E-Accom ID Card Reader by IARC@PSU Version 0.0.1
+        </Body1>
+      </div>
     </div>
   );
 }

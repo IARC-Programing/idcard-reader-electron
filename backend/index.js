@@ -2,6 +2,7 @@ const express = require("express");
 const app = express();
 const cors = require("cors");
 const fs = require("fs");
+const axios = require("axios");
 
 app.use(cors({}));
 app.use(express.json({}));
@@ -96,7 +97,29 @@ app.get("/pooling", async (req, res) => {
   try {
     console.log("Pooling New");
     console.log("Waiting For Device !");
-    res.json(currentPerson);
+
+    fs.readFile("config.json", (err, data) => {
+      if (err) {
+        res.status(400).json(err);
+      }
+      const dataJson = JSON.parse(data.toString());
+      console.log("data.apiURL", dataJson.apiURL + "/api/v1/id-card");
+
+      axios({
+        url: dataJson.apiURL + "/api/v1/id-card",
+        method: "POST",
+        data: currentPerson,
+        headers: { Authorization: `Bearer ${dataJson?.apiKey}` },
+      })
+        .then(() => {
+          console.log("Update Data into server successfully");
+        })
+        .catch((err) => {
+          console.error("Update data into server fail", err?.message);
+        });
+
+      res.json(currentPerson);
+    });
   } catch (error) {
     res.status(400).json({
       message: error?.message,
@@ -106,13 +129,19 @@ app.get("/pooling", async (req, res) => {
 
 app.get("/", (req, res) => {
   fs.readFile("config.json", (err, data) => {
+    if (err) {
+      res.status(400).json(err);
+    }
     const jsonData = data.toString();
     res.send(jsonData);
   });
 });
 
 app.put("/info", (req, res) => {
-  fs.writeFile("config.json", (err, data) => {
+  fs.writeFile("config.json", JSON.stringify(req.body), (err, data) => {
+    if (err) {
+      res.status(400).json(err);
+    }
     res.status(200).json({ success: true });
   });
 });
