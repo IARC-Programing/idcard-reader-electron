@@ -1,5 +1,6 @@
 // ./public/electron.js
 const path = require("path");
+require("./index");
 
 const { app, BrowserWindow } = require("electron");
 const isDev = require("electron-is-dev");
@@ -11,15 +12,17 @@ function createWindow() {
     height: 600,
     webPreferences: {
       nodeIntegration: true,
+      //   preload: path.join(__dirname, "preload.js"),
     },
   });
 
   // and load the index.html of the app.
   // win.loadFile("index.html");
   win.loadURL(
-    isDev
-      ? "http://localhost:3000"
-      : `file://${path.join(__dirname, "../build/index.html")}`
+    `file://${path.join(__dirname, "../build/index.html")}`
+    // isDev
+    //   ? "http://localhost:3000"
+    //   : `file://${path.join(__dirname, "../build/index.html")}`
   );
   // Open the DevTools.
   if (isDev) {
